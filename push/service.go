@@ -4,6 +4,7 @@ package push
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -67,7 +68,7 @@ func NewClient(cert tls.Certificate) (*http.Client, error) {
 }
 
 // Push sends a notification and waits for a response.
-func (s *Service) Push(deviceToken string, headers *Headers, payload []byte) (string, error) {
+func (s *Service) Push(ctx context.Context, deviceToken string, headers *Headers, payload []byte) (string, error) {
 	// check payload length before even hitting Apple.
 	if len(payload) > maxPayload {
 		return "", &Error{
@@ -83,6 +84,7 @@ func (s *Service) Push(deviceToken string, headers *Headers, payload []byte) (st
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Cancel = ctx.Done()
 	headers.set(req.Header)
 
 	resp, err := s.Client.Do(req)

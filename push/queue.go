@@ -1,5 +1,7 @@
 package push
 
+import "context"
+
 // Queue up notifications without waiting for the response.
 type Queue struct {
 	service       *Service
@@ -10,6 +12,7 @@ type Queue struct {
 // notification to send.
 type notification struct {
 	DeviceToken string
+	Context     context.Context
 	Headers     *Headers
 	Payload     []byte
 }
@@ -37,9 +40,10 @@ func NewQueue(service *Service, workers uint) *Queue {
 }
 
 // Push queues a notification to the APN service.
-func (q *Queue) Push(deviceToken string, headers *Headers, payload []byte) {
+func (q *Queue) Push(ctx context.Context, deviceToken string, headers *Headers, payload []byte) {
 	n := notification{
 		DeviceToken: deviceToken,
+		Context:     ctx,
 		Headers:     headers,
 		Payload:     payload,
 	}
@@ -58,7 +62,7 @@ func (q *Queue) Close() {
 
 func worker(q *Queue) {
 	for n := range q.notifications {
-		id, err := q.service.Push(n.DeviceToken, n.Headers, n.Payload)
+		id, err := q.service.Push(n.Context, n.DeviceToken, n.Headers, n.Payload)
 		q.Responses <- Response{DeviceToken: n.DeviceToken, ID: id, Err: err}
 	}
 }

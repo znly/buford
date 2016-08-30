@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -46,7 +47,17 @@ func NewClient(cert tls.Certificate) (*http.Client, error) {
 		Certificates: []tls.Certificate{cert},
 	}
 	config.BuildNameToCertificate()
-	transport := &http.Transport{TLSClientConfig: config}
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig:       config,
+		ResponseHeaderTimeout: 5 * time.Second,
+	}
 
 	if err := http2.ConfigureTransport(transport); err != nil {
 		return nil, err
